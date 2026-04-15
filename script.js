@@ -1,4 +1,4 @@
- const canvas = document.getElementById("game");
+const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 canvas.width = 800;
@@ -7,7 +7,7 @@ canvas.height = 600;
 let gameState = "menu";
 
 // player
-let player = {
+const player = {
   x: 100,
   y: 100,
   size: 20,
@@ -16,7 +16,7 @@ let player = {
 };
 
 // arma
-let gun = {
+const gun = {
   x: 400,
   y: 300,
   size: 15,
@@ -24,11 +24,11 @@ let gun = {
 };
 
 // inimigo
-let enemy = {
+const enemy = {
   x: 600,
   y: 400,
   size: 20,
-  speed: 1.5,
+  speed: 1.2,
   alive: true
 };
 
@@ -36,6 +36,7 @@ let bullets = [];
 let keys = {};
 let mouse = { x: 0, y: 0 };
 
+// iniciar jogo
 function startGame() {
   document.getElementById("menu").style.display = "none";
   canvas.style.display = "block";
@@ -46,14 +47,14 @@ function startGame() {
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-// posição do mouse
+// mouse
 canvas.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
   mouse.y = e.clientY - rect.top;
 });
 
-// tiro
+// tiro DIRECIONADO
 canvas.addEventListener("click", () => {
   if (!player.hasGun) return;
 
@@ -64,8 +65,8 @@ canvas.addEventListener("click", () => {
   bullets.push({
     x: player.x,
     y: player.y,
-    dx: (dx / dist) * 6,
-    dy: (dy / dist) * 6
+    vx: (dx / dist) * 8,
+    vy: (dy / dist) * 8
   });
 });
 
@@ -88,7 +89,7 @@ function update() {
     player.hasGun = true;
   }
 
-  // inimigo persegue
+  // inimigo segue
   if (enemy.alive) {
     let dx = player.x - enemy.x;
     let dy = player.y - enemy.y;
@@ -98,12 +99,12 @@ function update() {
     enemy.y += (dy / dist) * enemy.speed;
   }
 
-  // atualizar tiros
+  // tiros
   bullets.forEach(b => {
-    b.x += b.dx;
-    b.y += b.dy;
+    b.x += b.vx;
+    b.y += b.vy;
 
-    // colisão com inimigo
+    // colisão REAL
     if (enemy.alive &&
         b.x < enemy.x + enemy.size &&
         b.x > enemy.x &&
@@ -129,56 +130,54 @@ function draw() {
 
   if (gameState === "menu") return;
 
-  // desenha tudo primeiro
+  // mapa (fundo)
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // player
   ctx.fillStyle = "white";
   ctx.fillRect(player.x, player.y, player.size, player.size);
 
+  // arma
   if (!gun.picked) {
     ctx.fillStyle = "yellow";
     ctx.fillRect(gun.x, gun.y, gun.size, gun.size);
   }
 
+  // inimigo
   if (enemy.alive) {
     ctx.fillStyle = "red";
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
   }
 
+  // tiros
   ctx.fillStyle = "orange";
-  bullets.forEach(b => ctx.fillRect(b.x, b.y, 5, 5));
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, 6, 6));
 
-  // LANTERNA CORRIGIDA (escurece ao redor, não apaga objetos)
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.85)";
+  // ===== LANTERNA CERTA =====
+  ctx.fillStyle = "rgba(0,0,0,0.9)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.globalCompositeOperation = "destination-out";
-  let gradient = ctx.createRadialGradient(
-    player.x, player.y, 20,
-    player.x, player.y, 120
-  );
-  gradient.addColorStop(0, "rgba(0,0,0,1)");
-  gradient.addColorStop(1, "rgba(0,0,0,0)");
-
-  ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
+  ctx.arc(player.x + 10, player.y + 10, 120, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.restore();
+  ctx.globalCompositeOperation = "source-over";
+  // ==========================
 
   // HUD
   ctx.fillStyle = "white";
-  ctx.font = "20px Arial";
-  ctx.fillText("WASD = mover | clique = atirar", 20, 30);
+  ctx.font = "24px Arial";
+  ctx.fillText("WASD mover | clique atirar", 20, 30);
 
   if (gameState === "win") {
-    ctx.font = "40px Arial";
-    ctx.fillText("VOCÊ VENCEU", 250, 300);
+    ctx.font = "48px Arial";
+    ctx.fillText("VOCÊ VENCEU", 220, 300);
   }
 
   if (gameState === "lose") {
-    ctx.font = "40px Arial";
-    ctx.fillText("VOCÊ MORREU", 250, 300);
+    ctx.font = "48px Arial";
+    ctx.fillText("VOCÊ MORREU", 220, 300);
   }
 }
 
