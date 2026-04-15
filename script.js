@@ -36,7 +36,7 @@ let bullets = [];
 let keys = {};
 let mouse = { x: 0, y: 0 };
 
-// INICIAR
+// START
 function startGame() {
   document.getElementById("menu").style.display = "none";
   canvas.style.display = "block";
@@ -58,13 +58,16 @@ canvas.addEventListener("mousemove", e => {
 canvas.addEventListener("click", () => {
   if (!player.hasGun) return;
 
-  let dx = mouse.x - player.x;
-  let dy = mouse.y - player.y;
+  let cx = player.x + player.size / 2;
+  let cy = player.y + player.size / 2;
+
+  let dx = mouse.x - cx;
+  let dy = mouse.y - cy;
   let dist = Math.sqrt(dx*dx + dy*dy);
 
   bullets.push({
-    x: player.x,
-    y: player.y,
+    x: cx,
+    y: cy,
     vx: (dx / dist) * 8,
     vy: (dy / dist) * 8
   });
@@ -114,6 +117,12 @@ function update() {
     }
   });
 
+  // limpar balas fora da tela
+  bullets = bullets.filter(b =>
+    b.x > 0 && b.x < canvas.width &&
+    b.y > 0 && b.y < canvas.height
+  );
+
   // MORTE
   if (enemy.alive &&
       player.x < enemy.x + enemy.size &&
@@ -149,14 +158,18 @@ function draw() {
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
   }
 
-  // TIROS
+  // BALAS REDONDAS
   ctx.fillStyle = "orange";
-  bullets.forEach(b => ctx.fillRect(b.x, b.y, 6, 6));
+  bullets.forEach(b => {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
-  // ===== LANTERNA =====
+  // ===== LANTERNA SEM BUG =====
   ctx.save();
 
-  ctx.fillStyle = "rgba(0,0,0,0.9)";
+  ctx.fillStyle = "rgba(0,0,0,1)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.globalCompositeOperation = "destination-out";
@@ -165,7 +178,7 @@ function draw() {
   let cy = player.y + player.size / 2;
 
   let grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 150);
-  grad.addColorStop(0, "rgba(0,0,0,1)");
+  grad.addColorStop(0, "rgba(0,0,0,0.95)");
   grad.addColorStop(1, "rgba(0,0,0,0)");
 
   ctx.fillStyle = grad;
@@ -174,7 +187,7 @@ function draw() {
   ctx.fill();
 
   ctx.restore();
-  // ====================
+  // ============================
 
   // HUD
   ctx.fillStyle = "white";
