@@ -1,34 +1,34 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 800;
+canvas.width = 900;
 canvas.height = 600;
 
 let gameState = "menu";
 
-// player
-const player = {
+// PLAYER
+let player = {
   x: 100,
   y: 100,
   size: 20,
-  speed: 3,
+  speed: 3.5,
   hasGun: false
 };
 
-// arma
-const gun = {
-  x: 400,
+// ARMA
+let gun = {
+  x: 500,
   y: 300,
   size: 15,
   picked: false
 };
 
-// inimigo
-const enemy = {
-  x: 600,
+// INIMIGO
+let enemy = {
+  x: 700,
   y: 400,
   size: 20,
-  speed: 1.2,
+  speed: 1.4,
   alive: true
 };
 
@@ -36,25 +36,25 @@ let bullets = [];
 let keys = {};
 let mouse = { x: 0, y: 0 };
 
-// iniciar jogo
+// INICIAR
 function startGame() {
   document.getElementById("menu").style.display = "none";
   canvas.style.display = "block";
   gameState = "playing";
 }
 
-// teclado
+// TECLADO
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-// mouse
+// MOUSE POS
 canvas.addEventListener("mousemove", e => {
-  const rect = canvas.getBoundingClientRect();
+  let rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
   mouse.y = e.clientY - rect.top;
 });
 
-// tiro DIRECIONADO
+// TIRO
 canvas.addEventListener("click", () => {
   if (!player.hasGun) return;
 
@@ -73,13 +73,13 @@ canvas.addEventListener("click", () => {
 function update() {
   if (gameState !== "playing") return;
 
-  // movimento
+  // MOVIMENTO
   if (keys["w"]) player.y -= player.speed;
   if (keys["s"]) player.y += player.speed;
   if (keys["a"]) player.x -= player.speed;
   if (keys["d"]) player.x += player.speed;
 
-  // pegar arma
+  // PEGAR ARMA
   if (!gun.picked &&
       player.x < gun.x + gun.size &&
       player.x + player.size > gun.x &&
@@ -89,7 +89,7 @@ function update() {
     player.hasGun = true;
   }
 
-  // inimigo segue
+  // INIMIGO SEGUE
   if (enemy.alive) {
     let dx = player.x - enemy.x;
     let dy = player.y - enemy.y;
@@ -99,12 +99,11 @@ function update() {
     enemy.y += (dy / dist) * enemy.speed;
   }
 
-  // tiros
+  // TIROS
   bullets.forEach(b => {
     b.x += b.vx;
     b.y += b.vy;
 
-    // colisão REAL
     if (enemy.alive &&
         b.x < enemy.x + enemy.size &&
         b.x > enemy.x &&
@@ -115,7 +114,7 @@ function update() {
     }
   });
 
-  // perdeu
+  // MORTE
   if (enemy.alive &&
       player.x < enemy.x + enemy.size &&
       player.x + player.size > enemy.x &&
@@ -130,54 +129,66 @@ function draw() {
 
   if (gameState === "menu") return;
 
-  // mapa (fundo)
+  // FUNDO
   ctx.fillStyle = "#222";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // player
+  // PLAYER
   ctx.fillStyle = "white";
   ctx.fillRect(player.x, player.y, player.size, player.size);
 
-  // arma
+  // ARMA
   if (!gun.picked) {
     ctx.fillStyle = "yellow";
     ctx.fillRect(gun.x, gun.y, gun.size, gun.size);
   }
 
-  // inimigo
+  // INIMIGO
   if (enemy.alive) {
     ctx.fillStyle = "red";
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
   }
 
-  // tiros
+  // TIROS
   ctx.fillStyle = "orange";
   bullets.forEach(b => ctx.fillRect(b.x, b.y, 6, 6));
 
-  // ===== LANTERNA CERTA =====
+  // ===== LANTERNA =====
+  ctx.save();
+
   ctx.fillStyle = "rgba(0,0,0,0.9)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.globalCompositeOperation = "destination-out";
+
+  let cx = player.x + player.size / 2;
+  let cy = player.y + player.size / 2;
+
+  let grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 150);
+  grad.addColorStop(0, "rgba(0,0,0,1)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(player.x + 10, player.y + 10, 120, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 150, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
-  // ==========================
+
+  ctx.restore();
+  // ====================
 
   // HUD
   ctx.fillStyle = "white";
-  ctx.font = "24px Arial";
-  ctx.fillText("WASD mover | clique atirar", 20, 30);
+  ctx.font = "26px Arial";
+  ctx.fillText("WASD mover | clique atirar", 20, 40);
 
   if (gameState === "win") {
     ctx.font = "48px Arial";
-    ctx.fillText("VOCÊ VENCEU", 220, 300);
+    ctx.fillText("VOCÊ VENCEU", 250, 300);
   }
 
   if (gameState === "lose") {
     ctx.font = "48px Arial";
-    ctx.fillText("VOCÊ MORREU", 220, 300);
+    ctx.fillText("VOCÊ MORREU", 250, 300);
   }
 }
 
