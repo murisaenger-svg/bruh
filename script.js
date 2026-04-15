@@ -1,4 +1,4 @@
-const canvas = document.getElementById("game");
+ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 canvas.width = 800;
@@ -34,6 +34,7 @@ let enemy = {
 
 let bullets = [];
 let keys = {};
+let mouse = { x: 0, y: 0 };
 
 function startGame() {
   document.getElementById("menu").style.display = "none";
@@ -41,17 +42,30 @@ function startGame() {
   gameState = "playing";
 }
 
+// teclado
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-document.addEventListener("click", () => {
+// posição do mouse
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+});
+
+// tiro
+canvas.addEventListener("click", () => {
   if (!player.hasGun) return;
+
+  let dx = mouse.x - player.x;
+  let dy = mouse.y - player.y;
+  let dist = Math.sqrt(dx*dx + dy*dy);
 
   bullets.push({
     x: player.x,
     y: player.y,
-    dx: (enemy.x - player.x) / 20,
-    dy: (enemy.y - player.y) / 20
+    dx: (dx / dist) * 6,
+    dy: (dy / dist) * 6
   });
 });
 
@@ -74,7 +88,7 @@ function update() {
     player.hasGun = true;
   }
 
-  // inimigo segue
+  // inimigo persegue
   if (enemy.alive) {
     let dx = player.x - enemy.x;
     let dy = player.y - enemy.y;
@@ -84,11 +98,12 @@ function update() {
     enemy.y += (dy / dist) * enemy.speed;
   }
 
-  // tiros
+  // atualizar tiros
   bullets.forEach(b => {
     b.x += b.dx;
     b.y += b.dy;
 
+    // colisão com inimigo
     if (enemy.alive &&
         b.x < enemy.x + enemy.size &&
         b.x > enemy.x &&
@@ -114,45 +129,56 @@ function draw() {
 
   if (gameState === "menu") return;
 
-  // player
+  // desenha tudo primeiro
   ctx.fillStyle = "white";
   ctx.fillRect(player.x, player.y, player.size, player.size);
 
-  // arma
   if (!gun.picked) {
     ctx.fillStyle = "yellow";
     ctx.fillRect(gun.x, gun.y, gun.size, gun.size);
   }
 
-  // inimigo
   if (enemy.alive) {
     ctx.fillStyle = "red";
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
   }
 
-  // tiros
   ctx.fillStyle = "orange";
   bullets.forEach(b => ctx.fillRect(b.x, b.y, 5, 5));
 
-  // lanterna
-  ctx.fillStyle = "rgba(0,0,0,0.9)";
+  // LANTERNA CORRIGIDA (escurece ao redor, não apaga objetos)
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.85)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.globalCompositeOperation = "destination-out";
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
+  let gradient = ctx.createRadialGradient(
+    player.x, player.y, 20,
+    player.x, player.y, 120
+  );
+  gradient.addColorStop(0, "rgba(0,0,0,1)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
 
-  // telas finais
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // HUD
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("WASD = mover | clique = atirar", 20, 30);
+
   if (gameState === "win") {
-    ctx.fillStyle = "white";
-    ctx.fillText("Você venceu!", 330, 50);
+    ctx.font = "40px Arial";
+    ctx.fillText("VOCÊ VENCEU", 250, 300);
   }
 
   if (gameState === "lose") {
-    ctx.fillStyle = "red";
-    ctx.fillText("Você morreu", 330, 50);
+    ctx.font = "40px Arial";
+    ctx.fillText("VOCÊ MORREU", 250, 300);
   }
 }
 
