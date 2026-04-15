@@ -6,12 +6,28 @@ canvas.height = 600;
 
 let gameState = "menu";
 
+// MAPA
+const map = [
+  [1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,1,1,0,0,1],
+  [1,0,0,1,0,0,1,0,0,1],
+  [1,0,0,1,0,0,1,0,0,1],
+  [1,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,1,1,0,1,0,1],
+  [1,0,0,0,0,0,0,1,0,1],
+  [1,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1],
+];
+
+const tileSize = 60;
+
 // PLAYER
 let player = {
   x: 100,
   y: 100,
   size: 20,
-  speed: 3.5,
+  speed: 3,
   hasGun: false
 };
 
@@ -28,7 +44,7 @@ let enemy = {
   x: 700,
   y: 400,
   size: 20,
-  speed: 1.4,
+  speed: 1.2,
   alive: true
 };
 
@@ -43,23 +59,21 @@ function startGame() {
   gameState = "playing";
 }
 
-// TECLADO
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+// INPUT
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-// MOUSE POS
 canvas.addEventListener("mousemove", e => {
   let rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
   mouse.y = e.clientY - rect.top;
 });
 
-// TIRO
 canvas.addEventListener("click", () => {
   if (!player.hasGun) return;
 
-  let cx = player.x + player.size / 2;
-  let cy = player.y + player.size / 2;
+  let cx = player.x + player.size/2;
+  let cy = player.y + player.size/2;
 
   let dx = mouse.x - cx;
   let dy = mouse.y - cy;
@@ -73,16 +87,38 @@ canvas.addEventListener("click", () => {
   });
 });
 
+// COLISÃO CORRIGIDA (4 pontos)
+function isWall(x, y) {
+  let col = Math.floor(x / tileSize);
+  let row = Math.floor(y / tileSize);
+  return map[row] && map[row][col] === 1;
+}
+
+function canMove(x, y, size) {
+  return !(
+    isWall(x, y) ||
+    isWall(x + size, y) ||
+    isWall(x, y + size) ||
+    isWall(x + size, y + size)
+  );
+}
+
 function update() {
   if (gameState !== "playing") return;
 
-  // MOVIMENTO
-  if (keys["w"]) player.y -= player.speed;
-  if (keys["s"]) player.y += player.speed;
-  if (keys["a"]) player.x -= player.speed;
-  if (keys["d"]) player.x += player.speed;
+  // movimento corrigido
+  let nx = player.x;
+  let ny = player.y;
 
-  // PEGAR ARMA
+  if (keys["w"]) ny -= player.speed;
+  if (keys["s"]) ny += player.speed;
+  if (keys["a"]) nx -= player.speed;
+  if (keys["d"]) nx += player.speed;
+
+  if (canMove(nx, player.y, player.size)) player.x = nx;
+  if (canMove(player.x, ny, player.size)) player.y = ny;
+
+  // pegar arma
   if (!gun.picked &&
       player.x < gun.x + gun.size &&
       player.x + player.size > gun.x &&
@@ -92,7 +128,7 @@ function update() {
     player.hasGun = true;
   }
 
-  // INIMIGO SEGUE
+  // inimigo segue
   if (enemy.alive) {
     let dx = player.x - enemy.x;
     let dy = player.y - enemy.y;
@@ -102,7 +138,7 @@ function update() {
     enemy.y += (dy / dist) * enemy.speed;
   }
 
-  // TIROS
+  // tiros
   bullets.forEach(b => {
     b.x += b.vx;
     b.y += b.vy;
@@ -117,13 +153,12 @@ function update() {
     }
   });
 
-  // limpar balas fora da tela
   bullets = bullets.filter(b =>
     b.x > 0 && b.x < canvas.width &&
     b.y > 0 && b.y < canvas.height
   );
 
-  // MORTE
+  // morte
   if (enemy.alive &&
       player.x < enemy.x + enemy.size &&
       player.x + player.size > enemy.x &&
@@ -138,27 +173,33 @@ function draw() {
 
   if (gameState === "menu") return;
 
-  // FUNDO
-  ctx.fillStyle = "#222";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // mapa
+  for (let row = 0; row < map.length; row++) {
+    for (let col = 0; col < map[row].length; col++) {
+      if (map[row][col] === 1) {
+        ctx.fillStyle = "#555";
+        ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+      }
+    }
+  }
 
-  // PLAYER
+  // player
   ctx.fillStyle = "white";
   ctx.fillRect(player.x, player.y, player.size, player.size);
 
-  // ARMA
+  // arma
   if (!gun.picked) {
     ctx.fillStyle = "yellow";
     ctx.fillRect(gun.x, gun.y, gun.size, gun.size);
   }
 
-  // INIMIGO
+  // inimigo
   if (enemy.alive) {
     ctx.fillStyle = "red";
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
   }
 
-  // BALAS REDONDAS
+  // balas
   ctx.fillStyle = "orange";
   bullets.forEach(b => {
     ctx.beginPath();
@@ -166,28 +207,22 @@ function draw() {
     ctx.fill();
   });
 
-  // ===== LANTERNA SEM BUG =====
+  // LANTERNA SEM ROXO
   ctx.save();
-
-  ctx.fillStyle = "rgba(0,0,0,1)";
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = "rgba(0,0,0,0.9)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.globalCompositeOperation = "destination-out";
 
-  let cx = player.x + player.size / 2;
-  let cy = player.y + player.size / 2;
+  let cx = player.x + player.size/2;
+  let cy = player.y + player.size/2;
 
-  let grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 150);
-  grad.addColorStop(0, "rgba(0,0,0,0.95)");
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-
-  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 140, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
-  // ============================
 
   // HUD
   ctx.fillStyle = "white";
